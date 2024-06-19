@@ -24,19 +24,20 @@ struct lb4_backend {
 };
 
 struct lb4_service {
-	union {
-		__u32 backend_id;	/* Backend ID in lb4_backends */
-		__u32 affinity_timeout;	/* In seconds, only for svc frontend */
-		__u32 l7_lb_proxy_port;	/* In host byte order, only when flags2 && SVC_FLAG_L7LOADBALANCER */
-	};
-	/* For the service frontend, count denotes number of service backend
-	 * slots (otherwise zero).
-	 */
+	__u16 service_id;
 	__u16 count;
-	__u16 rev_nat_index;	/* Reverse NAT ID in lb4_reverse_nat */
+	__u16 rev_nat_index;
 	__u8 flags;
 	__u8 flags2;
 	__u8  pad[2];
 };
+
+#ifndef __section_maps
+#define __section_maps			SEC("maps")
+#endif
+
+#ifndef __section_maps_btf
+#define __section_maps_btf		SEC(".maps")
+#endif
 
 #endif /* __TARGET_ARCH_x86 */
