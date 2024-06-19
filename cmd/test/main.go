@@ -23,16 +23,11 @@ func main() {
 	}
 	// mount group2
 	cgroups.CheckOrMountCgrpFS("")
-	//
 	coll, err := ebpf.LoadCollection(os.Args[1])
 	if err != nil {
 		log.Fatalf("loading objects: %v", err)
 	}
 	defer coll.Close()
-	/*
-		5.7 以下 RawAttachProgram
-		5.7以上 AttachRawLink
-	*/
 	// Attach ebpf program to a cgroupv2
 	fmt.Println(coll.Programs["connect4"].FD())
 	time.Sleep(1 * time.Second)

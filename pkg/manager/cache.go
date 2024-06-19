@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"github.com/cilium/ebpf/link"
 	"github.com/eproxy/pkg/bpf"
 	"github.com/eproxy/pkg/set"
 	v1 "k8s.io/api/core/v1"
@@ -30,6 +31,7 @@ type serviceManager struct {
 	services map[string]*Service
 	lock     sync.RWMutex
 	bpfMap   *bpf.ServiceBPF
+	link     link.Link
 }
 
 func (s *serviceManager) OnAddEndpointSlice(endpointSlice *discovery.EndpointSlice) {
@@ -101,6 +103,6 @@ func (s *serviceManager) OnDeleteService(service *v1.Service) {
 
 var _ = &serviceManager{}
 
-func NewServiceManager() *serviceManager {
-	return &serviceManager{}
+func NewServiceManager(link link.Link) *serviceManager {
+	return &serviceManager{link: link}
 }

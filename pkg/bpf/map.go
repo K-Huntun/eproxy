@@ -4,6 +4,7 @@ package bpf
 import (
 	"github.com/cilium/ebpf"
 	"github.com/eproxy/pkg/manager"
+	"github.com/sirupsen/logrus"
 	"math/big"
 	"net"
 )
@@ -52,6 +53,7 @@ func (s *ServiceBPF) DeleteService(svc *manager.Service) {
 			Pad:          pad2uint8{},
 		}
 		if err := s.DeleteElemSerivceMap(key); err != nil {
+			logrus.Error("error deleting service map(service):", err)
 			return err
 		}
 		for index, _ := range svc.Endpoints {
@@ -63,6 +65,7 @@ func (s *ServiceBPF) DeleteService(svc *manager.Service) {
 				Pad:          pad2uint8{},
 			}
 			if err := s.DeleteElemSerivceMap(key); err != nil {
+				logrus.Error("error deleting service map(endpoint):", err)
 				return err
 			}
 		}
@@ -86,6 +89,7 @@ func (s *ServiceBPF) AppendService(svc *manager.Service) {
 		}
 
 		if err := s.UpdateElemSerivceMap(key, value); err != nil {
+			logrus.Error("error Append service map(service):", err)
 			return err
 		}
 		for index, _ := range svc.Endpoints {
@@ -102,6 +106,7 @@ func (s *ServiceBPF) AppendService(svc *manager.Service) {
 				Pad:       pad2uint8{},
 			}
 			if err := s.UpdateElemSerivceMap(key, value); err != nil {
+				logrus.Error("error Append service map(endpoints):", err)
 				return err
 			}
 		}
