@@ -9,14 +9,14 @@ import (
 type Service4Key struct {
 	ServiceIP    uint32
 	ServicePort  uint16
-	Backend_slot uint8
+	Backend_slot uint16
 	Proto        uint8
 	Pad          pad2uint8
 }
 
 // Service4Value 必须和bpf代码对齐
 type Service4Value struct {
-	BackendID uint32
+	ServiceID uint16
 	Count     uint16
 	Pad       pad2uint8
 }

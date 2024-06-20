@@ -43,7 +43,6 @@ int connect4(struct bpf_sock_addr *ctx) {
     key.dport = ctx->user_port;
     key.backend_slot = 0;
     key.proto = 0;
-    key.scope = 0;
 
     struct lb4_service* value= bpf_map_lookup_elem(&cilium_lb4_services ,&key);
     if (value == NULL){

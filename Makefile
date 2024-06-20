@@ -8,7 +8,7 @@ ebpfs:
 
 eproxy:
 	@echo "Build eproxy."
-	GOOS=linux GOARCH=amd64 go build -o bin/eproxy github.com/eproxy/cmd/test
+	GOOS=linux GOARCH=amd64 go build -o bin/eproxy github.com/eproxy/cmd/eproxy
 
 clean:
 	rm -rf bin/eproxy

@@ -3,7 +3,7 @@ package bpf
 
 import (
 	"github.com/cilium/ebpf"
-	"github.com/eproxy/pkg/manager"
+	"github.com/eproxy/pkg/cache"
 	"github.com/sirupsen/logrus"
 	"math/big"
 	"net"
@@ -13,8 +13,6 @@ type ServiceBPF struct {
 	ipv6   bool
 	lb4map ebpf.Map
 	lb6map ebpf.Map
-	// cache
-	service map[ServiceKey]ServiceValue
 }
 
 func (s *ServiceBPF) IsIpv6() bool {
@@ -29,22 +27,16 @@ func (s *ServiceBPF) LookUpElemSerivceMap(key ServiceKey) ServiceValue {
 
 func (s *ServiceBPF) DeleteElemSerivceMap(Key ServiceKey) error {
 	err := s.lb4map.Delete(Key)
-	if err == nil {
-		delete(s.service, Key)
-	}
 	return err
 }
 
 func (s *ServiceBPF) UpdateElemSerivceMap(Key ServiceKey, value ServiceValue) error {
 	err := s.lb4map.Update(Key, value, ebpf.UpdateAny)
-	if err == nil {
-		s.service[Key] = value
-	}
 	return err
 }
 
-func (s *ServiceBPF) DeleteService(svc *manager.Service) {
-	svc.Ports.Iter(func(port manager.Ports) error {
+func (s *ServiceBPF) DeleteService(svc *cache.Service) {
+	svc.Ports.Iter(func(port cache.Ports) error {
 		key := Service4Key{
 			ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
 			ServicePort:  port.Port,
@@ -60,7 +52,7 @@ func (s *ServiceBPF) DeleteService(svc *manager.Service) {
 			key := Service4Key{
 				ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
 				ServicePort:  port.Port,
-				Backend_slot: uint8(index),
+				Backend_slot: uint16(index),
 				Proto:        parseProto(port.Protocol),
 				Pad:          pad2uint8{},
 			}
@@ -73,8 +65,8 @@ func (s *ServiceBPF) DeleteService(svc *manager.Service) {
 	})
 }
 
-func (s *ServiceBPF) AppendService(svc *manager.Service) {
-	svc.Ports.Iter(func(port manager.Ports) error {
+func (s *ServiceBPF) AppendService(svc *cache.Service) {
+	svc.Ports.Iter(func(port cache.Ports) error {
 		key := Service4Key{
 			ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
 			ServicePort:  port.Port,
@@ -83,7 +75,7 @@ func (s *ServiceBPF) AppendService(svc *manager.Service) {
 			Pad:          pad2uint8{},
 		}
 		value := Service4Value{
-			BackendID: 0,
+			ServiceID: 0,
 			Count:     uint16(len(svc.Endpoints)),
 			Pad:       pad2uint8{},
 		}
@@ -96,12 +88,12 @@ func (s *ServiceBPF) AppendService(svc *manager.Service) {
 			key := Service4Key{
 				ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
 				ServicePort:  port.Port,
-				Backend_slot: uint8(index),
+				Backend_slot: uint16(index),
 				Proto:        parseProto(port.Protocol),
 				Pad:          pad2uint8{},
 			}
 			value := Service4Value{
-				BackendID: 0,
+				ServiceID: 0,
 				Count:     uint16(len(svc.Endpoints)),
 				Pad:       pad2uint8{},
 			}

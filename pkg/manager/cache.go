@@ -3,7 +3,7 @@ package manager
 import (
 	"github.com/cilium/ebpf/link"
 	"github.com/eproxy/pkg/bpf"
-	"github.com/eproxy/pkg/set"
+	"github.com/eproxy/pkg/cache"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"sync"
@@ -13,22 +13,8 @@ const (
 	LabelServiceName = "kubernetes.io/service-name"
 )
 
-type Ports struct {
-	Protocol v1.Protocol
-	Port     uint16
-}
-
-type Service struct {
-	name      string
-	namespace string
-	id        string
-	IpAddress string
-	Ports     set.Set[Ports]
-	Endpoints []string
-}
-
 type serviceManager struct {
-	services map[string]*Service
+	services map[string]*cache.Service
 	lock     sync.RWMutex
 	bpfMap   *bpf.ServiceBPF
 	link     link.Link
@@ -47,9 +33,9 @@ func (s *serviceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new
 	svcname := new.Labels[LabelServiceName]
 	service, ok := s.services[svcname+"/"+new.Namespace]
 	if !ok {
-		service = &Service{
-			name:      svcname,
-			namespace: new.Namespace,
+		service = &cache.Service{
+			Name:      svcname,
+			Namespace: new.Namespace,
 		}
 	}
 	eps := make([]string, 0, len(new.Endpoints))
@@ -77,20 +63,20 @@ func (s *serviceManager) OnDeleteEndpointSlice(endpointSlice *discovery.Endpoint
 }
 
 func (s *serviceManager) OnAddService(service *v1.Service) {
-	svc := &Service{
-		name:      service.Name,
-		namespace: service.Namespace,
+	svc := &cache.Service{
+		Name:      service.Name,
+		Namespace: service.Namespace,
 		//TODO 适配其他
 		IpAddress: service.Spec.ClusterIP,
 	}
 	for _, port := range service.Spec.Ports {
-		p := Ports{
+		p := cache.Ports{
 			Protocol: port.Protocol,
 			Port:     uint16(port.Port),
 		}
 		svc.Ports.Add(p)
 	}
-	s.services[svc.name] = svc
+	s.services[svc.Name] = svc
 }
 
 func (s *serviceManager) OnUpdateService(service *v1.Service) {

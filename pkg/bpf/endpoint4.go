@@ -3,19 +3,16 @@ package bpf
 
 // Endpoint4Key 必须和bpf代码对齐
 type Endpoint4Key struct {
-	ServiceIP    uint32
-	ServicePort  uint16
-	Backend_slot uint8
-	Proto        uint8
-	Node         uint8
-	Pad          pad2uint8
+	EndpointID uint32 // 前16位 serviceid,后16位endpointid
+	Pad        pad2uint8
 }
 
 // Endpoint4Value 必须和bpf代码对齐
 type Endpoint4Value struct {
-	BackendID uint32
-	Count     uint16
-	Pad       pad2uint8
+	EndpointIP   uint32
+	EndpointPort uint16
+	Proto        uint8
+	Pad          pad2uint8
 }
 
 type Endpoint4 struct {
