@@ -6,8 +6,8 @@ import (
 	"net"
 )
 
-func IPString2Int16(ip string) uint16 {
-	var ipret uint16
+func IPString2Int32(ip string) uint32 {
+	var ipret uint32
 	IP := net.ParseIP(ip)
 	if IP == nil {
 		return 0

@@ -30,26 +30,29 @@ func (s *serviceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new
 		return
 	}
 	// TODO check change
-
+	var needDelete = true
 	svcname := new.Labels[LabelServiceName]
 	service, ok := s.services[svcname+"/"+new.Namespace]
 	if !ok {
+		needDelete = false
 		service = &cache.Service{
 			Name:      svcname,
 			Namespace: new.Namespace,
 		}
 	}
-	eps := make([]uint16, 0, len(new.Endpoints))
+	eps := make([]uint32, 0, len(new.Endpoints))
 	for _, ep := range new.Endpoints {
 		if ep.Conditions.Ready != nil && *ep.Conditions.Ready {
 			for _, ip := range ep.Addresses {
-				if ret := utils.IPString2Int16(ip); ret == 0 {
+				if ret := utils.IPString2Int32(ip); ret == 0 {
 					eps = append(eps, ret)
 				}
 			}
 		}
 	}
-	s.bpfMap.DeleteService(service)
+	if needDelete {
+		s.bpfMap.DeleteService(service)
+	}
 	service.Endpoints = eps
 	s.bpfMap.AppendService(service)
 	s.services[svcname+"/"+new.Namespace] = service

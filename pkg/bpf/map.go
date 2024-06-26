@@ -38,11 +38,10 @@ func (s *ServiceBPF) UpdateElemSerivceMap(Key ServiceKey, value ServiceValue) er
 func (s *ServiceBPF) DeleteService(svc *cache.Service) {
 	svc.Ports.Iter(func(port cache.Ports) error {
 		key := Service4Key{
-			ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
-			ServicePort:  port.Port,
-			Backend_slot: 0,
-			Proto:        parseProto(port.Protocol),
-			Pad:          pad2uint8{},
+			ServiceIP:   uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
+			ServicePort: port.Port,
+			Proto:       parseProto(port.Protocol),
+			Pad:         pad2uint8{},
 		}
 		if err := s.DeleteElemSerivceMap(key); err != nil {
 			logrus.Error("error deleting service map(service):", err)
@@ -57,17 +56,6 @@ func (s *ServiceBPF) DeleteService(svc *cache.Service) {
 				logrus.Error("error deleting service map(endpoint):", err)
 				return err
 			}
-			//key := Service4Key{
-			//	ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
-			//	ServicePort:  port.Port,
-			//	Backend_slot: uint16(index),
-			//	Proto:        parseProto(port.Protocol),
-			//	Pad:          pad2uint8{},
-			//}
-			//if err := s.DeleteElemSerivceMap(key); err != nil {
-			//	logrus.Error("error deleting service map(endpoint):", err)
-			//	return err
-			//}
 		}
 		return nil
 	})
@@ -76,11 +64,10 @@ func (s *ServiceBPF) DeleteService(svc *cache.Service) {
 func (s *ServiceBPF) AppendService(svc *cache.Service) {
 	svc.Ports.Iter(func(port cache.Ports) error {
 		key := Service4Key{
-			ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
-			ServicePort:  port.Port,
-			Backend_slot: 0,
-			Proto:        parseProto(port.Protocol),
-			Pad:          pad2uint8{},
+			ServiceIP:   uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
+			ServicePort: port.Port,
+			Proto:       parseProto(port.Protocol),
+			Pad:         pad2uint8{},
 		}
 		value := Service4Value{
 			ServiceID: svc.ServiceId,
@@ -92,14 +79,15 @@ func (s *ServiceBPF) AppendService(svc *cache.Service) {
 			logrus.Error("error Append service map(service):", err)
 			return err
 		}
-		for index, _ := range svc.Endpoints {
+		for index, Eip := range svc.Endpoints {
 			key := Endpoint4Key{
 				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index),
 				Pad:        pad2uint8{},
 			}
 			value := Endpoint4Value{
-
-				Pad: pad2uint8{},
+				EndpointIP:   Eip,
+				EndpointPort: port.TargetPort,
+				Pad:          pad2uint8{},
 			}
 			if err := s.UpdateElemSerivceMap(key, value); err != nil {
 				logrus.Error("error Append service map(endpoints):", err)

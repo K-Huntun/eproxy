@@ -6,8 +6,9 @@ import (
 )
 
 type Ports struct {
-	Protocol v1.Protocol
-	Port     uint16
+	Protocol   v1.Protocol
+	Port       uint16
+	TargetPort uint16
 }
 
 type Service struct {
@@ -16,5 +17,5 @@ type Service struct {
 	ServiceId uint16
 	IpAddress string
 	Ports     set.Set[Ports]
-	Endpoints []uint16
+	Endpoints []uint32
 }
