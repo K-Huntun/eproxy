@@ -16,5 +16,5 @@ type Service struct {
 	ServiceId uint16
 	IpAddress string
 	Ports     set.Set[Ports]
-	Endpoints []string
+	Endpoints []uint16
 }

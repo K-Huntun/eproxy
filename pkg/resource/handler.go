@@ -3,6 +3,8 @@ package resource
 
 import (
 	"github.com/eproxy/pkg/manager"
+	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"k8s.io/client-go/tools/cache"
 )
@@ -12,11 +14,12 @@ type ServiceAdapterHandler struct {
 }
 
 func (s *ServiceAdapterHandler) OnAdd(obj interface{}) {
-
+	s.OnAddService(obj.(*corev1.Service))
 }
 
 func (s *ServiceAdapterHandler) OnUpdate(oldObj, newObj interface{}) {
 	//s.event <- KubernetesEvent{}
+	logrus.Info("update service no handle")
 }
 
 func (s *ServiceAdapterHandler) OnDelete(obj interface{}) {

@@ -49,17 +49,25 @@ func (s *ServiceBPF) DeleteService(svc *cache.Service) {
 			return err
 		}
 		for index, _ := range svc.Endpoints {
-			key := Service4Key{
-				ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
-				ServicePort:  port.Port,
-				Backend_slot: uint16(index),
-				Proto:        parseProto(port.Protocol),
-				Pad:          pad2uint8{},
+			key := Endpoint4Key{
+				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index),
+				Pad:        pad2uint8{},
 			}
 			if err := s.DeleteElemSerivceMap(key); err != nil {
 				logrus.Error("error deleting service map(endpoint):", err)
 				return err
 			}
+			//key := Service4Key{
+			//	ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
+			//	ServicePort:  port.Port,
+			//	Backend_slot: uint16(index),
+			//	Proto:        parseProto(port.Protocol),
+			//	Pad:          pad2uint8{},
+			//}
+			//if err := s.DeleteElemSerivceMap(key); err != nil {
+			//	logrus.Error("error deleting service map(endpoint):", err)
+			//	return err
+			//}
 		}
 		return nil
 	})
@@ -75,7 +83,7 @@ func (s *ServiceBPF) AppendService(svc *cache.Service) {
 			Pad:          pad2uint8{},
 		}
 		value := Service4Value{
-			ServiceID: 0,
+			ServiceID: svc.ServiceId,
 			Count:     uint16(len(svc.Endpoints)),
 			Pad:       pad2uint8{},
 		}
@@ -85,17 +93,13 @@ func (s *ServiceBPF) AppendService(svc *cache.Service) {
 			return err
 		}
 		for index, _ := range svc.Endpoints {
-			key := Service4Key{
-				ServiceIP:    uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
-				ServicePort:  port.Port,
-				Backend_slot: uint16(index),
-				Proto:        parseProto(port.Protocol),
-				Pad:          pad2uint8{},
+			key := Endpoint4Key{
+				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index),
+				Pad:        pad2uint8{},
 			}
-			value := Service4Value{
-				ServiceID: 0,
-				Count:     uint16(len(svc.Endpoints)),
-				Pad:       pad2uint8{},
+			value := Endpoint4Value{
+
+				Pad: pad2uint8{},
 			}
 			if err := s.UpdateElemSerivceMap(key, value); err != nil {
 				logrus.Error("error Append service map(endpoints):", err)

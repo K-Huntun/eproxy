@@ -4,6 +4,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/eproxy/pkg/bpf"
 	"github.com/eproxy/pkg/cache"
+	"github.com/eproxy/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	"sync"
@@ -38,11 +39,13 @@ func (s *serviceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new
 			Namespace: new.Namespace,
 		}
 	}
-	eps := make([]string, 0, len(new.Endpoints))
+	eps := make([]uint16, 0, len(new.Endpoints))
 	for _, ep := range new.Endpoints {
 		if ep.Conditions.Ready != nil && *ep.Conditions.Ready {
 			for _, ip := range ep.Addresses {
-				eps = append(eps, ip)
+				if ret := utils.IPString2Int16(ip); ret == 0 {
+					eps = append(eps, ret)
+				}
 			}
 		}
 	}
