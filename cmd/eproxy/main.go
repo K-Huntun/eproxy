@@ -4,12 +4,11 @@ package main
 import (
 	"flag"
 	"github.com/eproxy/pkg/bpf"
+	"github.com/eproxy/pkg/kubernetes/controller"
+	"github.com/eproxy/pkg/kubernetes/informers"
 	"github.com/eproxy/pkg/manager"
-	"github.com/eproxy/pkg/resource"
-	"github.com/eproxy/pkg/signals"
+	"github.com/eproxy/pkg/utils/signals"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"net/http"
 	"os"
 	"time"
@@ -46,7 +45,6 @@ func ParseCommand() {
 
 func main() {
 	ParseCommand()
-	var client *kubernetes.Clientset
 	StopCh := signals.SetupSignalHandler()
 	bm := bpf.NewBPFManager(ebpffile)
 	err := bm.LoadAndAttach()
@@ -54,21 +52,14 @@ func main() {
 		logrus.Fatal(err)
 		return
 	}
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		logrus.Fatal(err)
-		return
-	}
-	if client, err = kubernetes.NewForConfig(config); err != nil {
-		logrus.Error("create k8s client error: ", err)
-	}
-	k8sresource := resource.NewResources(client)
+	ServiceManager := manager.NewServiceManager(bm.ServiceMap(), bm.EndpointMap())
 
-	svcmgr := manager.NewServiceManager(bm.ServiceMap(), bm.EndpointMap())
-
-	k8sresource.SetEndpointHandler(&resource.EndpointSliceAdapterHandler{svcmgr})
-	k8sresource.SetServiceHandler(&resource.ServiceAdapterHandler{svcmgr})
-
+	k8sresource := informers.NewResources(kubeconfig)
+	controller := controller.NewController(ServiceManager,
+		k8sresource.KubernetetsClient(),
+		k8sresource.ServiceInformer(),
+		k8sresource.EndpointSliceInfomer())
+	go controller.Run(1, StopCh)
 	k8sresource.StartListenEventFromKubernetes(StopCh)
 	for {
 		select {

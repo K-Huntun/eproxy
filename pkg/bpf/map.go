@@ -33,7 +33,6 @@ func (s *Service) UpdateElemSerivceMap(Key ServiceKey, value ServiceValue) error
 
 var _ ServiceMap = &Service{}
 
-// TODO no use
 type Endpoint struct {
 	ipv6         bool
 	endpoint_map *ebpf.Map

@@ -19,7 +19,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__type(key, struct lb4_key);
 	__type(value, struct lb4_service);
-	__uint(pinning, LIBBPF_PIN_BY_NAME);
+	__uint(pinning, LIBBPF_PIN_NONE);
 	__uint(max_entries, CILIUM_LB_SERVICE_MAP_MAX_ENTRIES);
 } eproxy_lb4_services __section_maps_btf;
 
@@ -27,7 +27,7 @@ struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
 	__type(key, __u32);
 	__type(value, struct lb4_backend);
-	__uint(pinning, LIBBPF_PIN_BY_NAME);
+	__uint(pinning, LIBBPF_PIN_NONE);
 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
 } eproxy_lb4_backends __section_maps_btf;
 
