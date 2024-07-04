@@ -11,6 +11,8 @@ type BPFManager struct {
 	ebpffile   string
 	cglink     link.Link
 	collection *ebpf.Collection
+	service    *ebpf.Map
+	endpoint   *ebpf.Map
 }
 
 func NewBPFManager(file string) *BPFManager {
@@ -31,7 +33,7 @@ func (bm *BPFManager) LoadAndAttach() error {
 		return err
 	}
 	bm.collection, err = ebpf.NewCollectionWithOptions(spec, ebpf.CollectionOptions{
-		Maps: ebpf.MapOptions{PinPath: (EProxyPath())},
+		Maps: ebpf.MapOptions{PinPath: EProxyPath()},
 	})
 	if err != nil {
 		return err
@@ -43,11 +45,24 @@ func (bm *BPFManager) LoadAndAttach() error {
 		Program: bm.collection.Programs["connect4"],
 		Attach:  ebpf.AttachCGroupInet4Connect,
 	})
+	if err != nil {
+		return err
+	}
+	bm.service = bm.collection.Maps["eproxy_lb4_services"]
+	bm.endpoint = bm.collection.Maps["eproxy_lb4_backends"]
 	return err
 }
 
 func (bm *BPFManager) Link() link.Link {
 	return bm.cglink
+}
+
+func (bm *BPFManager) ServiceMap() *ebpf.Map {
+	return bm.service
+}
+
+func (bm *BPFManager) EndpointMap() *ebpf.Map {
+	return bm.endpoint
 }
 
 func (bm *BPFManager) Close() error {

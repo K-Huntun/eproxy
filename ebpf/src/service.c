@@ -21,7 +21,7 @@ struct {
 	__type(value, struct lb4_service);
 	__uint(pinning, LIBBPF_PIN_BY_NAME);
 	__uint(max_entries, CILIUM_LB_SERVICE_MAP_MAX_ENTRIES);
-} cilium_lb4_services __section_maps_btf;
+} eproxy_lb4_services __section_maps_btf;
 
 struct {
 	__uint(type, BPF_MAP_TYPE_HASH);
@@ -29,7 +29,7 @@ struct {
 	__type(value, struct lb4_backend);
 	__uint(pinning, LIBBPF_PIN_BY_NAME);
 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
-} cilium_lb4_backends __section_maps_btf;
+} eproxy_lb4_backends __section_maps_btf;
 
 SEC("cgroup/connect4")
 int connect4(struct bpf_sock_addr *ctx) {
@@ -44,7 +44,7 @@ int connect4(struct bpf_sock_addr *ctx) {
     key.backend_slot = 0;
     key.proto = 0;
     bpf_printk("before user ip %lu, port:%lu\n",ctx->user_ip4, ctx->user_port);
-    struct lb4_service* value= bpf_map_lookup_elem(&cilium_lb4_services ,&key);
+    struct lb4_service* value= bpf_map_lookup_elem(&eproxy_lb4_services ,&key);
     if (value == NULL){
         return 1;
     }
@@ -55,7 +55,7 @@ int connect4(struct bpf_sock_addr *ctx) {
     }
     __u16 index = (bpf_get_prandom_u32() % count)+1;
     __u32 blackend_id = value->service_id << 16 | index;
-    struct lb4_backend* end_value = bpf_map_lookup_elem(&cilium_lb4_backends ,&blackend_id);
+    struct lb4_backend* end_value = bpf_map_lookup_elem(&eproxy_lb4_backends ,&blackend_id);
     if (end_value == NULL){
         return 1;
     }

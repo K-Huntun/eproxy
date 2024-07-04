@@ -64,7 +64,7 @@ func main() {
 	}
 	k8sresource := resource.NewResources(client)
 
-	svcmgr := manager.NewServiceManager(bm.Link())
+	svcmgr := manager.NewServiceManager(bm.ServiceMap(), bm.EndpointMap())
 
 	k8sresource.SetEndpointHandler(&resource.EndpointSliceAdapterHandler{svcmgr})
 	k8sresource.SetServiceHandler(&resource.ServiceAdapterHandler{svcmgr})

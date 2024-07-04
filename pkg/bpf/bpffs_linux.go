@@ -21,7 +21,6 @@ func mountFS(printWarning bool) error {
 		log.Warning("================================= WARNING ==========================================")
 		log.Warning("BPF filesystem is not mounted. This will lead to network disruption when eProxy pods")
 		log.Warning("are restarted. Ensure that the BPF filesystem is mounted in the host.")
-		log.Warning("https://docs.cilium.io/en/stable/operations/system_requirements/#mounted-ebpf-filesystem")
 		log.Warning("====================================================================================")
 	}
 
