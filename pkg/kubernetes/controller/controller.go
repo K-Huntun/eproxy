@@ -75,9 +75,8 @@ func (c *Controller) handler(key string) error {
 }
 
 func (c *Controller) ServiceHandler(name string, namespace string) error {
-	//TODO 调用 c.serviceManager 接口
-	// c.serviceManager包含缓存，使用现状service和缓存比较，如何无变化则退出，如果有变化，则应用到ebpf和缓存。
 	service, err := c.serviceLister.Services(namespace).Get(name)
+	// TODO 创建新的svc
 	bsvc := manager.NewService()
 	if err != nil || !service.ObjectMeta.DeletionTimestamp.IsZero() {
 		logrus.Info("svc is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
@@ -90,9 +89,8 @@ func (c *Controller) ServiceHandler(name string, namespace string) error {
 }
 
 func (c *Controller) EndpointHandler(name string, namespace string) error {
-	//TODO 调用 c.serviceManager 接口
-	// c.serviceManager包含缓存，使用现状service和缓存比较，如何无变化则退出，如果有变化，则应用到ebpf和缓存。
 	endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
+	// TODO 创建新的svc
 	bsvc := manager.NewService()
 	if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
 		logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
