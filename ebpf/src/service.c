@@ -43,7 +43,7 @@ int connect4(struct bpf_sock_addr *ctx) {
     key.dport = ctx->user_port;
     key.backend_slot = 0;
     key.proto = 0;
-
+    bpf_printk("before user ip %lu, port:%lu\n",ctx->user_ip4, ctx->user_port);
     struct lb4_service* value= bpf_map_lookup_elem(&cilium_lb4_services ,&key);
     if (value == NULL){
         return 1;
@@ -61,5 +61,6 @@ int connect4(struct bpf_sock_addr *ctx) {
     }
     ctx->user_ip4 = end_value->address;
     ctx->user_port = end_value->port;
+    bpf_printk("after user ip %lu, port:%lu\n",ctx->user_ip4, ctx->user_port);
     return 1;
 }

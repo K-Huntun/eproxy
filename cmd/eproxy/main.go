@@ -3,10 +3,7 @@ package main
 
 import (
 	"flag"
-	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/link"
-	"github.com/cilium/ebpf/rlimit"
-	"github.com/eproxy/pkg/cgroups"
+	"github.com/eproxy/pkg/bpf"
 	"github.com/eproxy/pkg/manager"
 	"github.com/eproxy/pkg/resource"
 	"github.com/eproxy/pkg/signals"
@@ -51,7 +48,8 @@ func main() {
 	ParseCommand()
 	var client *kubernetes.Clientset
 	StopCh := signals.SetupSignalHandler()
-	link, err := LoadAndAttachEbpf(ebpffile)
+	bm := bpf.NewBPFManager(ebpffile)
+	err := bm.LoadAndAttach()
 	if err != nil {
 		logrus.Fatal(err)
 		return
@@ -66,8 +64,7 @@ func main() {
 	}
 	k8sresource := resource.NewResources(client)
 
-	svcmgr := manager.NewServiceManager(link)
-	//svcmgr.
+	svcmgr := manager.NewServiceManager(bm.Link())
 
 	k8sresource.SetEndpointHandler(&resource.EndpointSliceAdapterHandler{svcmgr})
 	k8sresource.SetServiceHandler(&resource.ServiceAdapterHandler{svcmgr})
@@ -76,30 +73,11 @@ func main() {
 	for {
 		select {
 		case <-StopCh:
+			logrus.Info("stop eproxy,close ebpf")
+			bm.Close()
 			return
 		default:
 			time.Sleep(10 * time.Second)
 		}
 	}
-}
-
-func LoadAndAttachEbpf(ebpffile string) (link.Link, error) {
-	// Allow the current process to lock memory for eBPF resources.
-	if err := rlimit.RemoveMemlock(); err != nil {
-		logrus.Fatal(err)
-	}
-	// mount group2
-	cgroups.CheckOrMountCgrpFS("")
-	coll, err := ebpf.LoadCollection(ebpffile)
-	if err != nil {
-		return nil, err
-	}
-	defer coll.Close()
-	// Attach ebpf program to a cgroupv2
-	//fmt.Println(coll.Programs["connect4"].FD())
-	return link.AttachCgroup(link.CgroupOptions{
-		Path:    cgroups.GetCgroupRoot(),
-		Program: coll.Programs["connect4"],
-		Attach:  ebpf.AttachCGroupInet4Connect,
-	})
 }
