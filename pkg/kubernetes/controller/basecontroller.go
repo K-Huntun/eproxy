@@ -6,7 +6,6 @@ package controller
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/meta"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -65,12 +64,12 @@ func (c *BaseController) Run(threadiness int, stopCh <-chan struct{}) error {
 func (c *BaseController) Enqueue(obj interface{}) {
 	var key string
 	var err error
-	meta, err := meta.TypeAccessor(obj)
+	//meta, err := meta.TypeAccessor(obj)
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
-	c.Workqueue.Add(meta.GetKind() + "/" + key)
+	c.Workqueue.Add(key) //meta.GetKind() + "/" +
 }
 
 // runWorker is a long-running function that will continually call the

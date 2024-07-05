@@ -2,6 +2,7 @@ package informers
 
 import (
 	"context"
+	"github.com/eproxy/pkg/defaults"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,13 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"time"
-)
-
-const (
-	// LabelServiceProxyName indicates that an alternative service
-	// eproxy will implement this Service.
-	LabelServiceProxyName = "service.kubernetes.io/service-proxy-name"
-	ProxyName             = "eproxy"
 )
 
 type EndpointSliceInformer struct {
@@ -186,20 +180,18 @@ func (informer *EndpointSliceInformer) Run(stopCh <-chan struct{}) {
 var _ cache.SharedIndexInformer = &EndpointSliceInformer{}
 
 func defaultCustomEndpointSliceInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	eProxyName, err := labels.NewRequirement(LabelServiceProxyName, selection.Equals, []string{ProxyName})
+	eProxyName, err := labels.NewRequirement(defaults.LabelServiceProxyName, selection.Equals, []string{defaults.ProxyName})
 	if err != nil {
 		panic(err)
 	}
-	labelSelector := labels.NewSelector()
-	labelSelector = labelSelector.Add(*eProxyName)
 	indexer := cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-			options.LabelSelector = labelSelector.String()
+			options.LabelSelector = labels.NewSelector().Add(*eProxyName).String()
 			return client.DiscoveryV1().EndpointSlices(v1.NamespaceAll).List(context.TODO(), options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-			options.LabelSelector = labelSelector.String()
+			options.LabelSelector = labels.NewSelector().Add(*eProxyName).String()
 			return client.DiscoveryV1().EndpointSlices(v1.NamespaceAll).Watch(context.TODO(), options)
 		},
 	}

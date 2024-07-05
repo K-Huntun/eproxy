@@ -3,9 +3,12 @@ package informers
 
 import (
 	"context"
+	"github.com/eproxy/pkg/defaults"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -182,12 +185,18 @@ func (informer *ServiceInformer) Run(stopCh <-chan struct{}) {
 var _ cache.SharedIndexInformer = &ServiceInformer{}
 
 func defaultCustomServiceInformer(client kubernetes.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	eProxyName, err := labels.NewRequirement(defaults.LabelServiceProxyName, selection.Equals, []string{defaults.ProxyName})
+	if err != nil {
+		panic(err)
+	}
 	indexer := cache.NewIndexer(cache.DeletionHandlingMetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	lw := &cache.ListWatch{
 		ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
+			options.LabelSelector = labels.NewSelector().Add(*eProxyName).String()
 			return client.CoreV1().Services(v1.NamespaceAll).List(context.TODO(), options)
 		},
 		WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
+			options.LabelSelector = labels.NewSelector().Add(*eProxyName).String()
 			return client.CoreV1().Services(v1.NamespaceAll).Watch(context.TODO(), options)
 		},
 	}

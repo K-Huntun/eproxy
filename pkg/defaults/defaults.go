@@ -549,7 +549,10 @@ const (
 	// The value is used to determine the bit allocation for cluster ID and
 	// identity in a numeric identity. Values > 255 will decrease the number of
 	// allocatable identities.
-	MaxConnectedClusters = 255
+	MaxConnectedClusters  = 255
+	SvccontrollerName     = "svc-controller"
+	LabelServiceProxyName = "service.kubernetes.io/service-proxy-name"
+	ProxyName             = "eproxy"
 )
 
 var (

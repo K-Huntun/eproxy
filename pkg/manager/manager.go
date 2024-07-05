@@ -125,7 +125,7 @@ func (s *ServiceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new
 		}
 	}
 	if needDelete {
-		s.DeleteService(service)
+		s.DeleteService(service.ServiceKey())
 	}
 	service.Endpoints = eps
 	s.AppendService(service)
@@ -139,7 +139,7 @@ func (s *ServiceManager) OnDeleteEndpointSlice(endpointSlice *discovery.Endpoint
 	if !ok {
 		return
 	}
-	s.DeleteService(service)
+	s.DeleteService(service.ServiceKey())
 	delete(s.services, svcname+"/"+endpointSlice.Namespace)
 }
 

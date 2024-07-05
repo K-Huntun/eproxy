@@ -4,6 +4,7 @@
 package controller
 
 import (
+	"github.com/eproxy/pkg/defaults"
 	"github.com/eproxy/pkg/manager"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/client-go/informers/core/v1"
@@ -15,8 +16,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"strings"
 )
-
-const svccontrollerName = "svc-controller"
 
 type Controller struct {
 	BaseController
@@ -30,9 +29,9 @@ type Controller struct {
 func NewController(service *manager.ServiceManager, k8sClient kubernetes.Interface, serviceinformer corev1.ServiceInformer, endpointinformer discoveryv1.EndpointSliceInformer) BController {
 	ctl := &Controller{
 		BaseController: BaseController{
-			Workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), svccontrollerName),
-			Synced:    []cache.InformerSynced{serviceinformer.Informer().HasSynced, endpointinformer.Informer().HasSynced},
-			Name:      svccontrollerName,
+			Workqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), defaults.SvccontrollerName),
+			Synced:    []cache.InformerSynced{endpointinformer.Informer().HasSynced, serviceinformer.Informer().HasSynced}, //serviceinformer.Informer().HasSynced
+			Name:      defaults.SvccontrollerName,
 		},
 		KubernetesClient: k8sClient,
 		serviceManager:   service,
