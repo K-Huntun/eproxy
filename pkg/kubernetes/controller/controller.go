@@ -80,15 +80,15 @@ func (c *Controller) ServiceHandler(name string, namespace string) error {
 
 func (c *Controller) EndpointHandler(name string, namespace string) error {
 	logrus.Info("EndpointSlice Handler handle one event")
-	//endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
-	//// TODO 创建新的svc
-	//bsvc := manager.NewService()
-	//if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
-	//	logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
-	//	c.serviceManager.DeleteService(bsvc.ServiceKey())
-	//	return nil
-	//}
-	//logrus.Info("one endpointSlice had change,", c.cluster, "/", namespace, "/", name)
-	//c.serviceManager.UpdateService(bsvc)
+	endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
+	// TODO 创建新的svc
+	bsvc := manager.NewService()
+	if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
+		logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
+		c.serviceManager.DeleteService(bsvc.ServiceKey())
+		return nil
+	}
+	logrus.Info("one endpointSlice had change,", c.cluster, "/", namespace, "/", name)
+	c.serviceManager.UpdateService(bsvc)
 	return nil
 }
