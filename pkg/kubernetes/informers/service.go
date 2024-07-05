@@ -59,13 +59,18 @@ func convertToCustomService(obj interface{}) interface{} {
 		p := &v1.Service{
 			TypeMeta: concreteObj.TypeMeta,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      concreteObj.Name,
-				Namespace: concreteObj.Namespace,
-				Labels:    concreteObj.Labels,
+				Name:              concreteObj.Name,
+				Namespace:         concreteObj.Namespace,
+				ResourceVersion:   concreteObj.ResourceVersion,
+				DeletionTimestamp: concreteObj.DeletionTimestamp,
+				Annotations:       concreteObj.Annotations,
+				OwnerReferences:   concreteObj.OwnerReferences,
+				Labels:            concreteObj.Labels,
 			},
 			Spec: v1.ServiceSpec{
-				Ports: concreteObj.Spec.Ports,
-				Type:  concreteObj.Spec.Type,
+				ClusterIP: concreteObj.Spec.ClusterIP,
+				Ports:     concreteObj.Spec.Ports,
+				Type:      concreteObj.Spec.Type,
 			},
 		}
 		*concreteObj = v1.Service{}
@@ -89,8 +94,9 @@ func convertToCustomService(obj interface{}) interface{} {
 					Labels:            service.Labels,
 				},
 				Spec: v1.ServiceSpec{
-					Ports: service.Spec.Ports,
-					Type:  service.Spec.Type,
+					ClusterIP: service.Spec.ClusterIP,
+					Ports:     service.Spec.Ports,
+					Type:      service.Spec.Type,
 				},
 				Status: v1.ServiceStatus{},
 			},
@@ -113,10 +119,6 @@ func (informer *ServiceInformer) HasSynced() bool {
 	return informer.controller.HasSynced()
 }
 
-func ComparesLabes(map1, map2 map[string]string) bool {
-	return false
-}
-
 func (informer *ServiceInformer) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	fifo := cache.NewDeltaFIFOWithOptions(cache.DeltaFIFOOptions{
@@ -137,23 +139,22 @@ func (informer *ServiceInformer) Run(stopCh <-chan struct{}) {
 				obj = convertToCustomService(d.Object)
 				switch d.Type {
 				case cache.Sync, cache.Added, cache.Updated, cache.Replaced:
-					if _, exists, err := informer.indexer.Get(obj); err == nil && exists {
-						// 无需关注 service变化
-						// Selector将由 Endpoint支持
+					if old, exists, err := informer.indexer.Get(obj); err == nil && exists {
 						if err := informer.indexer.Update(obj); err != nil {
 							return err
 						}
+						informer.eventhandler.OnUpdate(old, obj)
 					} else {
 						if err := informer.indexer.Add(obj); err != nil {
 							return err
 						}
-						//informer.eventhandler.OnAdd(obj)
+						informer.eventhandler.OnAdd(obj)
 					}
 				case cache.Deleted:
 					if err := informer.indexer.Delete(obj); err != nil {
 						return err
 					}
-					//informer.eventhandler.OnDelete(obj)
+					informer.eventhandler.OnDelete(obj)
 				}
 			}
 			return nil

@@ -78,12 +78,14 @@ func (c *Controller) ServiceHandler(name string, namespace string) error {
 	service, err := c.serviceLister.Services(namespace).Get(name)
 	// TODO 创建新的svc
 	bsvc := manager.NewService()
-	if err != nil || !service.ObjectMeta.DeletionTimestamp.IsZero() {
+
+	if !service.ObjectMeta.DeletionTimestamp.IsZero() || err != nil {
 		logrus.Info("svc is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
-		c.serviceManager.DeleteService(bsvc)
+		c.serviceManager.DeleteService(bsvc.ServiceKey())
 		return nil
 	}
 	logrus.Info("one svc had change,", c.cluster, "/", namespace, "/", name)
+
 	c.serviceManager.UpdateService(bsvc)
 	return nil
 }
@@ -94,7 +96,7 @@ func (c *Controller) EndpointHandler(name string, namespace string) error {
 	bsvc := manager.NewService()
 	if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
 		logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
-		c.serviceManager.DeleteService(bsvc)
+		c.serviceManager.DeleteService(bsvc.ServiceKey())
 		return nil
 	}
 	logrus.Info("one endpointSlice had change,", c.cluster, "/", namespace, "/", name)

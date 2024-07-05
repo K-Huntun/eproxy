@@ -76,6 +76,9 @@ func convertToCustomEndpointSlice(obj interface{}) interface{} {
 				OwnerReferences:   concreteObj.OwnerReferences,
 				Labels:            concreteObj.Labels,
 			},
+			AddressType: concreteObj.AddressType,
+			Ports:       concreteObj.Ports,
+			Endpoints:   concreteObj.Endpoints,
 		}
 		*concreteObj = discovery.EndpointSlice{}
 		return p
@@ -97,6 +100,9 @@ func convertToCustomEndpointSlice(obj interface{}) interface{} {
 					OwnerReferences:   EndpointSlice.OwnerReferences,
 					Labels:            EndpointSlice.Labels,
 				},
+				AddressType: EndpointSlice.AddressType,
+				Ports:       EndpointSlice.Ports,
+				Endpoints:   EndpointSlice.Endpoints,
 			},
 		}
 		*EndpointSlice = discovery.EndpointSlice{}

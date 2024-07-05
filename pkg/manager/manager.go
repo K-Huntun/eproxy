@@ -23,7 +23,12 @@ type ServiceManager struct {
 	endpointsMap *ebpf.Map
 }
 
-func (s *ServiceManager) DeleteService(svc *Service) {
+func (s *ServiceManager) DeleteService(serviceKey string) error {
+	svc, ok := s.services[serviceKey]
+	if !ok {
+		logrus.Info("service not found,key: ", serviceKey)
+		return nil
+	}
 	svc.Ports.Iter(func(port Ports) error {
 		key := bpf.Service4Key{
 			ServiceIP:   uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
@@ -47,9 +52,15 @@ func (s *ServiceManager) DeleteService(svc *Service) {
 		}
 		return nil
 	})
+	s.lock.Lock()
+	delete(s.services, serviceKey)
+	s.lock.Unlock()
+	return nil
 }
 
-func (s *ServiceManager) UpdateService(svc *Service) {}
+func (s *ServiceManager) UpdateService(svc *Service) {
+
+}
 
 func (s *ServiceManager) AppendService(svc *Service) {
 	svc.Ports.Iter(func(port Ports) error {
