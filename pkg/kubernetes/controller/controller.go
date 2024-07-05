@@ -63,42 +63,32 @@ func (c *Controller) handler(key string) error {
 		logrus.Errorf("invalid key: %s", key)
 		return nil
 	}
-	if keyArr[0] == "services" {
+	if keyArr[0] == ServiceType {
 		return c.ServiceHandler(keyArr[1], keyArr[2])
 	}
-	if keyArr[0] == "endpoints" {
-		return c.ServiceHandler(keyArr[1], keyArr[2])
+	if keyArr[0] == EndpointSliceType {
+		return c.EndpointHandler(keyArr[1], keyArr[2])
 	}
 	logrus.Errorf("unsupport key: %s", key)
 	return nil
 }
 
 func (c *Controller) ServiceHandler(name string, namespace string) error {
-	service, err := c.serviceLister.Services(namespace).Get(name)
-	// TODO 创建新的svc
-	bsvc := manager.NewService()
-
-	if !service.ObjectMeta.DeletionTimestamp.IsZero() || err != nil {
-		logrus.Info("svc is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
-		c.serviceManager.DeleteService(bsvc.ServiceKey())
-		return nil
-	}
-	logrus.Info("one svc had change,", c.cluster, "/", namespace, "/", name)
-
-	c.serviceManager.UpdateService(bsvc)
+	logrus.Info("Service Handler don't work")
 	return nil
 }
 
 func (c *Controller) EndpointHandler(name string, namespace string) error {
-	endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
-	// TODO 创建新的svc
-	bsvc := manager.NewService()
-	if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
-		logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
-		c.serviceManager.DeleteService(bsvc.ServiceKey())
-		return nil
-	}
-	logrus.Info("one endpointSlice had change,", c.cluster, "/", namespace, "/", name)
-	c.serviceManager.UpdateService(bsvc)
+	logrus.Info("EndpointSlice Handler handle one event")
+	//endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
+	//// TODO 创建新的svc
+	//bsvc := manager.NewService()
+	//if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
+	//	logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
+	//	c.serviceManager.DeleteService(bsvc.ServiceKey())
+	//	return nil
+	//}
+	//logrus.Info("one endpointSlice had change,", c.cluster, "/", namespace, "/", name)
+	//c.serviceManager.UpdateService(bsvc)
 	return nil
 }

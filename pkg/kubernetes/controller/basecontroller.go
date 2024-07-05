@@ -6,6 +6,8 @@ package controller
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	discovery "k8s.io/api/discovery/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -21,6 +23,8 @@ const (
 	FailedSynced = "FailedSync"
 	// is synced successfully
 	MessageResourceSynced = "Synced successfully"
+	ServiceType           = "Service"
+	EndpointSliceType     = "EndpointSlice"
 )
 
 type BController interface {
@@ -64,12 +68,21 @@ func (c *BaseController) Run(threadiness int, stopCh <-chan struct{}) error {
 func (c *BaseController) Enqueue(obj interface{}) {
 	var key string
 	var err error
-	//meta, err := meta.TypeAccessor(obj)
+	typep := ""
+	// TODO 只需要监控 EndpointSlice。EndpointSlice反查询 Service
+	switch obj.(type) {
+	case *v1.Service:
+		typep = ServiceType
+	case *discovery.EndpointSlice:
+		typep = EndpointSliceType
+	default:
+		typep = "Unknown"
+	}
 	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
 		utilruntime.HandleError(err)
 		return
 	}
-	c.Workqueue.Add(key) //meta.GetKind() + "/" +
+	c.Workqueue.Add(typep + "/" + key)
 }
 
 // runWorker is a long-running function that will continually call the

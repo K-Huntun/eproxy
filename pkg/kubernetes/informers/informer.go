@@ -32,8 +32,7 @@ func (resources *Resources) EndpointSliceInfomer() discoveryv1.EndpointSliceInfo
 }
 
 func (resources *Resources) StartListenEventFromKubernetes(stopCh <-chan struct{}) {
-	resources.ServiceInformer().Informer().Run(stopCh)
-	resources.EndpointSliceInfomer().Informer().Run(stopCh)
+	resources.informers.Start(stopCh)
 }
 
 func NewResources(kubeconfig string) *Resources {
