@@ -5,10 +5,7 @@ import (
 	"github.com/eproxy/pkg/bpf"
 	"github.com/eproxy/pkg/utils"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
-	"math/big"
-	"net"
 	"sync"
 )
 
@@ -31,7 +28,7 @@ func (s *ServiceManager) DeleteService(serviceKey string) error {
 	}
 	svc.Ports.Iter(func(port Ports) error {
 		key := bpf.Service4Key{
-			ServiceIP:   uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
+			ServiceIP:   svc.IpAddress.Address(),
 			ServicePort: port.Port,
 			Proto:       bpf.ParseProto(port.Protocol),
 			Pad:         bpf.Pad2uint8{},
@@ -58,14 +55,22 @@ func (s *ServiceManager) DeleteService(serviceKey string) error {
 	return nil
 }
 
-func (s *ServiceManager) UpdateService(svc *Service) {
-
+func (s *ServiceManager) UpdateService(svc *Service) error {
+	old, ok := s.services[svc.ServiceKey()]
+	if !ok {
+		s.AppendService(svc)
+		s.services[svc.ServiceKey()] = svc
+		return nil
+	}
+	err := s.DeleteService(old.ServiceKey())
+	s.AppendService(svc)
+	return err
 }
 
 func (s *ServiceManager) AppendService(svc *Service) {
 	svc.Ports.Iter(func(port Ports) error {
 		key := bpf.Service4Key{
-			ServiceIP:   uint32(big.NewInt(0).SetBytes(net.ParseIP(svc.IpAddress).To4()).Int64()),
+			ServiceIP:   svc.IpAddress.Address(),
 			ServicePort: port.Port,
 			Proto:       bpf.ParseProto(port.Protocol),
 			Pad:         bpf.Pad2uint8{},
@@ -141,23 +146,6 @@ func (s *ServiceManager) OnDeleteEndpointSlice(endpointSlice *discovery.Endpoint
 	}
 	s.DeleteService(service.ServiceKey())
 	delete(s.services, svcname+"/"+endpointSlice.Namespace)
-}
-
-func (s *ServiceManager) OnAddService(service *v1.Service) {
-	logrus.Info("OnAddService, Name: ", service.Name)
-	svc := &Service{
-		Name:      service.Name,
-		Namespace: service.Namespace,
-		IpAddress: service.Spec.ClusterIP,
-	}
-	for _, port := range service.Spec.Ports {
-		p := Ports{
-			Protocol: port.Protocol,
-			Port:     uint16(port.Port),
-		}
-		svc.Ports.Add(p)
-	}
-	s.services[svc.Name] = svc
 }
 
 var _ = &ServiceManager{}
