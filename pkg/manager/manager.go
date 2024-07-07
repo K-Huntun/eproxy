@@ -1,11 +1,13 @@
 package manager
 
 import (
+	"encoding/binary"
 	"github.com/cilium/ebpf"
 	"github.com/eproxy/pkg/bpf"
 	"github.com/eproxy/pkg/utils"
 	"github.com/sirupsen/logrus"
 	discovery "k8s.io/api/discovery/v1"
+	"net"
 	"sync"
 )
 
@@ -14,10 +16,11 @@ const (
 )
 
 type ServiceManager struct {
-	services     map[string]*Service
-	lock         sync.RWMutex
-	serviceMap   *ebpf.Map
-	endpointsMap *ebpf.Map
+	services       map[string]*Service
+	cacheSerivceId map[uint16]bool
+	lock           sync.RWMutex
+	serviceMap     *ebpf.Map
+	endpointsMap   *ebpf.Map
 }
 
 func (s *ServiceManager) DeleteService(serviceKey string) error {
@@ -28,10 +31,9 @@ func (s *ServiceManager) DeleteService(serviceKey string) error {
 	}
 	svc.Ports.Iter(func(port Ports) error {
 		key := bpf.Service4Key{
-			ServiceIP:   svc.IpAddress.Address(),
-			ServicePort: port.Port,
+			ServiceIP:   binary.LittleEndian.Uint32(svc.IpAddress.To4()),
+			ServicePort: utils.LittleEndianPort(port.Port),
 			Proto:       bpf.ParseProto(port.Protocol),
-			Pad:         bpf.Pad2uint8{},
 		}
 		if err := s.serviceMap.Delete(key); err != nil {
 			logrus.Error("error deleting service map(service):", err)
@@ -40,7 +42,6 @@ func (s *ServiceManager) DeleteService(serviceKey string) error {
 		for index, _ := range svc.Endpoints {
 			key := bpf.Endpoint4Key{
 				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index),
-				Pad:        bpf.Pad2uint8{},
 			}
 			if err := s.endpointsMap.Delete(key); err != nil {
 				logrus.Error("error deleting service map(endpoint):", err)
@@ -58,42 +59,54 @@ func (s *ServiceManager) DeleteService(serviceKey string) error {
 func (s *ServiceManager) UpdateService(svc *Service) error {
 	old, ok := s.services[svc.ServiceKey()]
 	if !ok {
+		logrus.Info("service not found,key: ", svc.ServiceKey(), ",add svc to bpf")
 		s.AppendService(svc)
-		s.services[svc.ServiceKey()] = svc
 		return nil
 	}
+	logrus.Info("update svc to ")
 	err := s.DeleteService(old.ServiceKey())
 	s.AppendService(svc)
 	return err
 }
 
 func (s *ServiceManager) AppendService(svc *Service) {
+	for i := 1; i < 65535; i++ {
+		if _, ok := s.cacheSerivceId[uint16(i)]; !ok {
+			s.cacheSerivceId[svc.ServiceId] = true
+			svc.ServiceId = uint16(i)
+			break
+		}
+	}
+	logrus.Infof("serivce(%s) id is: %d", svc.Name, svc.ServiceId)
 	svc.Ports.Iter(func(port Ports) error {
 		key := bpf.Service4Key{
-			ServiceIP:   svc.IpAddress.Address(),
-			ServicePort: port.Port,
+			ServiceIP:   binary.LittleEndian.Uint32(svc.IpAddress.To4()),
+			ServicePort: utils.LittleEndianPort(port.Port),
 			Proto:       bpf.ParseProto(port.Protocol),
-			Pad:         bpf.Pad2uint8{},
 		}
 		value := bpf.Service4Value{
 			ServiceID: svc.ServiceId,
 			Count:     uint16(len(svc.Endpoints)),
-			Pad:       bpf.Pad2uint8{},
 		}
-
+		if s.serviceMap == nil {
+			logrus.Info("service map not initialized")
+			return nil
+		}
 		if err := s.serviceMap.Update(key, value, ebpf.UpdateAny); err != nil {
 			logrus.Error("error Append service map(service):", err)
 			return err
 		}
 		for index, Eip := range svc.Endpoints {
 			key := bpf.Endpoint4Key{
-				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index),
-				Pad:        bpf.Pad2uint8{},
+				EndpointID: uint32(svc.ServiceId)<<16 | uint32(index+1),
 			}
 			value := bpf.Endpoint4Value{
 				EndpointIP:   Eip,
-				EndpointPort: port.TargetPort,
-				Pad:          bpf.Pad2uint8{},
+				EndpointPort: utils.LittleEndianPort(port.TargetPort),
+			}
+			if s.endpointsMap == nil {
+				logrus.Info("endpoints map not initialized")
+				return nil
 			}
 			if err := s.endpointsMap.Update(key, value, ebpf.UpdateAny); err != nil {
 				logrus.Error("error Append service map(endpoints):", err)
@@ -102,6 +115,9 @@ func (s *ServiceManager) AppendService(svc *Service) {
 		}
 		return nil
 	})
+	s.lock.Lock()
+	s.services[svc.ServiceKey()] = svc
+	s.lock.Unlock()
 }
 
 func (s *ServiceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new *discovery.EndpointSlice) {
@@ -123,7 +139,7 @@ func (s *ServiceManager) OnUpdateEndpointSlice(old *discovery.EndpointSlice, new
 	for _, ep := range new.Endpoints {
 		if ep.Conditions.Ready != nil && *ep.Conditions.Ready {
 			for _, ip := range ep.Addresses {
-				if ret := utils.IPString2Int32(ip); ret == 0 {
+				if ret := binary.LittleEndian.Uint32(net.ParseIP(ip).To4()); ret == 0 {
 					eps = append(eps, ret)
 				}
 			}
@@ -152,8 +168,9 @@ var _ = &ServiceManager{}
 
 func NewServiceManager(service, endpoint *ebpf.Map) *ServiceManager {
 	return &ServiceManager{
-		serviceMap:   service,
-		endpointsMap: endpoint,
-		services:     make(map[string]*Service),
+		serviceMap:     service,
+		endpointsMap:   endpoint,
+		services:       make(map[string]*Service),
+		cacheSerivceId: make(map[uint16]bool),
 	}
 }

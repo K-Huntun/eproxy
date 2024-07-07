@@ -17,3 +17,9 @@ func IPString2Int32(ip string) uint32 {
 	}
 	return ipret
 }
+
+func LittleEndianPort(port uint16) uint16 {
+	h := port & 0xff
+	l := port >> 8
+	return h<<8 | l
+}

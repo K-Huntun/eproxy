@@ -8,24 +8,23 @@ type Service4Key struct {
 	ServiceIP   uint32
 	ServicePort uint16
 	Proto       uint8
-	Pad         Pad2uint8
+	Pad         uint8
 }
 
 // Service4Value 必须和bpf代码对齐
 type Service4Value struct {
 	ServiceID uint16
 	Count     uint16
-	Pad       Pad2uint8
 }
 
 func ParseProto(proto v1.Protocol) uint8 {
 	switch proto {
 	case v1.ProtocolTCP:
-		return 1
+		return 6
 	case v1.ProtocolUDP:
-		return 2
+		return 17
 	case v1.ProtocolSCTP:
-		return 3
+		return 132
 	}
 	return 0
 }
@@ -33,7 +32,6 @@ func ParseProto(proto v1.Protocol) uint8 {
 // Endpoint4Key 必须和bpf代码对齐
 type Endpoint4Key struct {
 	EndpointID uint32 // 前16位 serviceid,后16位endpointid
-	Pad        Pad2uint8
 }
 
 // Endpoint4Value 必须和bpf代码对齐
@@ -41,15 +39,13 @@ type Endpoint4Value struct {
 	EndpointIP   uint32
 	EndpointPort uint16
 	Proto        uint8
-	Pad          Pad2uint8
+	Pad          uint8
 }
 
 type Endpoint4 struct {
 	key   Endpoint4Key
 	value Endpoint4Value
 }
-
-type Pad2uint8 [2]uint8
 
 type ServiceMap interface {
 	LookUpElemSerivceMap(key ServiceKey) ServiceValue

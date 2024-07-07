@@ -17,6 +17,10 @@ import (
 	"strings"
 )
 
+const (
+	LabelServiceName = "kubernetes.io/service-name"
+)
+
 type Controller struct {
 	BaseController
 	cluster          string
@@ -78,11 +82,20 @@ func (c *Controller) ServiceHandler(name string, namespace string) error {
 	return nil
 }
 
-func (c *Controller) EndpointHandler(name string, namespace string) error {
-	logrus.Info("EndpointSlice Handler handle one event")
+func (c *Controller) EndpointHandler(namespace string, name string) error {
+	logrus.Info("EndpointSlice Handler handle one event, namespace: ", namespace, ",name: ", name)
 	endpointSlice, err := c.endpointsLister.EndpointSlices(namespace).Get(name)
-	// TODO 创建新的svc
-	bsvc := manager.NewService()
+	if err != nil {
+		logrus.Error("can't get endpointSlice ", name, err)
+		return err
+	}
+	svcname := endpointSlice.Labels[LabelServiceName]
+	svc, err := c.serviceLister.Services(namespace).Get(svcname)
+	if err != nil {
+		logrus.Error("can't get service ", svcname, err)
+		return err
+	}
+	bsvc := manager.NewService(svc, endpointSlice)
 	if err != nil || !endpointSlice.ObjectMeta.DeletionTimestamp.IsZero() {
 		logrus.Info("endpointSlice is Deleted name:", name, ",namespace: ", namespace, ",err:", err)
 		c.serviceManager.DeleteService(bsvc.ServiceKey())

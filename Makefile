@@ -1,5 +1,5 @@
 
-all: eproxy
+all: eproxy ebpfs
 	@echo "Build finished."
 
 ebpfs:

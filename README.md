@@ -3,6 +3,9 @@ eProxy is a lightweight and efficient replacement for kube-proxy in Kubernetes e
 
 # How to deploy 
 
+```go
+bpftool cgroup detach /run/eproxy/cgroupv2  connect4 id 10
+```
 
 
 # How to build

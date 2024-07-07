@@ -11,7 +11,6 @@ import (
 
 // CiliumPath returns the bpffs path to be used for Cilium object pins.
 func EProxyPath() string {
-	//once.Do(lockDown)
 	return filepath.Join(defaults.BPFFSRoot, "eproxy")
 }
 

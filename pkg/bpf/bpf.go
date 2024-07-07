@@ -5,6 +5,7 @@ import (
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/eproxy/pkg/cgroups"
+	"github.com/sirupsen/logrus"
 )
 
 type BPFManager struct {
@@ -50,6 +51,7 @@ func (bm *BPFManager) LoadAndAttach() error {
 	}
 	bm.service = bm.collection.Maps["eproxy_lb4_services"]
 	bm.endpoint = bm.collection.Maps["eproxy_lb4_backends"]
+	logrus.Info("maps: ", bm.collection.Maps)
 	return err
 }
 
