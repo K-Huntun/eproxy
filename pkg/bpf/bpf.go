@@ -29,6 +29,7 @@ func (bm *BPFManager) LoadAndAttach() error {
 	}
 	// mount group2
 	cgroups.CheckOrMountCgrpFS("")
+	CheckOrMountBtfFS()
 	spec, err := ebpf.LoadCollectionSpec(bm.ebpffile)
 	if err != nil {
 		return err
