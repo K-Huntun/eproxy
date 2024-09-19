@@ -1,8 +1,6 @@
 # eproxy
 eProxy is a lightweight and efficient replacement for kube-proxy in Kubernetes environments, leveraging eBPF (Extended Berkeley Packet Filter) technology for enhanced performance and flexibility.
 
-eProxy is not a replacement for kube-proxy. As part of a hybrid service proxy, eProxy alleviates the workload of kube-proxy.eProxy can also be part of the solution for macvlan networks.
-
 # How to deploy 
 
 ```shell
