@@ -5,6 +5,8 @@ package controller
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	discovery "k8s.io/api/discovery/v1"
@@ -12,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"time"
 )
 
 const (
@@ -118,7 +119,7 @@ func (c *BaseController) processNextWorkItem() bool {
 				c.Workqueue.AddRateLimited(key)
 				return fmt.Errorf("error syncing '%s' in %s: %s, requeuing ", key, c.Name, err.Error())
 			}
-			logrus.Error("Dropping %s out of the queue in %s: %s", key, c.Name, err)
+			logrus.Errorf("Dropping %s out of the queue in %s: %s", key, c.Name, err)
 			utilruntime.HandleError(err)
 			return nil
 		}

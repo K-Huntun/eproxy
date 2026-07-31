@@ -10,7 +10,7 @@ import (
 
 type BPFManager struct {
 	ebpffile   string
-	cglink     link.Link
+	cglinks    []link.Link
 	collection *ebpf.Collection
 	service    *ebpf.Map
 	endpoint   *ebpf.Map
@@ -40,15 +40,34 @@ func (bm *BPFManager) LoadAndAttach() error {
 	if err != nil {
 		return err
 	}
-	// Attach ebpf program to a cgroupv2
-	//fmt.Println(coll.Programs["connect4"].FD())
-	bm.cglink, err = link.AttachCgroup(link.CgroupOptions{
-		Path:    cgroups.GetCgroupRoot(),
-		Program: bm.collection.Programs["connect4"],
-		Attach:  ebpf.AttachCGroupInet4Connect,
-	})
-	if err != nil {
-		return err
+	programs := []struct {
+		name   string
+		attach ebpf.AttachType
+	}{
+		{
+			name:   "connect4",
+			attach: ebpf.AttachCGroupInet4Connect,
+		},
+		{
+			name:   "sendmsg4",
+			attach: ebpf.AttachCGroupUDP4Sendmsg,
+		},
+	}
+	for _, prog := range programs {
+		program := bm.collection.Programs[prog.name]
+		if program == nil {
+			continue
+		}
+		cglink, attachErr := link.AttachCgroup(link.CgroupOptions{
+			Path:    cgroups.GetCgroupRoot(),
+			Program: program,
+			Attach:  prog.attach,
+		})
+		if attachErr != nil {
+			bm.Close()
+			return attachErr
+		}
+		bm.cglinks = append(bm.cglinks, cglink)
 	}
 	bm.service = bm.collection.Maps["eproxy_lb4_services"]
 	bm.endpoint = bm.collection.Maps["eproxy_lb4_backends"]
@@ -57,7 +76,10 @@ func (bm *BPFManager) LoadAndAttach() error {
 }
 
 func (bm *BPFManager) Link() link.Link {
-	return bm.cglink
+	if len(bm.cglinks) == 0 {
+		return nil
+	}
+	return bm.cglinks[0]
 }
 
 func (bm *BPFManager) ServiceMap() *ebpf.Map {
@@ -69,7 +91,18 @@ func (bm *BPFManager) EndpointMap() *ebpf.Map {
 }
 
 func (bm *BPFManager) Close() error {
-	err := bm.cglink.Close()
-	bm.collection.Close()
-	return err
+	var retErr error
+	for _, cglink := range bm.cglinks {
+		if cglink == nil {
+			continue
+		}
+		if err := cglink.Close(); err != nil && retErr == nil {
+			retErr = err
+		}
+	}
+	bm.cglinks = nil
+	if bm.collection != nil {
+		bm.collection.Close()
+	}
+	return retErr
 }

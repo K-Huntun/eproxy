@@ -31,36 +31,70 @@ struct {
 	__uint(max_entries, CILIUM_LB_BACKENDS_MAP_MAX_ENTRIES);
 } eproxy_lb4_backends __section_maps_btf;
 
-SEC("cgroup/connect4")
-int connect4(struct bpf_sock_addr *ctx) {
-    int ret = 1; /* OK value */
-    if (ctx->type != SOCK_STREAM && ctx->type != SOCK_DGRAM) {
-        bpf_printk("unkonw socket type");
-        return ret;
+static __always_inline __u8 get_l4_proto(struct bpf_sock_addr *ctx)
+{
+    if (ctx->protocol != 0) {
+        return ctx->protocol;
     }
+
+    if (ctx->type == SOCK_STREAM) {
+        return 6;
+    }
+
+    if (ctx->type == SOCK_DGRAM) {
+        return 17;
+    }
+
+    return 0;
+}
+
+static __always_inline int lb4_redirect(struct bpf_sock_addr *ctx)
+{
     struct lb4_key key = {};
-    key.address = ctx->user_ip4;
-    key.dport = ctx->user_port;
-    key.proto = ctx->protocol;
-    bpf_printk("before user ip %lu, port:%d,protocol: %d, \n",ctx->user_ip4, ctx->user_port,ctx->protocol);
-    struct lb4_service* value= bpf_map_lookup_elem(&eproxy_lb4_services ,&key);
-    if (value == NULL){
+    struct lb4_service *svc;
+    struct lb4_backend *backend;
+    __u16 count;
+    __u16 index;
+    __u32 backend_id;
+
+    if (ctx->type != SOCK_STREAM && ctx->type != SOCK_DGRAM) {
         return 1;
     }
 
-    __u16 count = value->count;
-    if (count == 0){
+    key.address = ctx->user_ip4;
+    key.dport = ctx->user_port;
+    key.proto = get_l4_proto(ctx);
+
+    svc = bpf_map_lookup_elem(&eproxy_lb4_services, &key);
+    if (svc == NULL) {
         return 1;
     }
-    __u16 index = (bpf_get_prandom_u32() % count)+1;
-    __u32 blackend_id = value->service_id << 16 | index;
-    bpf_printk("query endpoint id: %d",blackend_id);
-    struct lb4_backend* end_value = bpf_map_lookup_elem(&eproxy_lb4_backends ,&blackend_id);
-    if (end_value == NULL){
+
+    count = svc->count;
+    if (count == 0) {
         return 1;
     }
-    ctx->user_ip4 = end_value->address;
-    ctx->user_port = end_value->port;
-    bpf_printk("after user ip %lu, port:%d\n",ctx->user_ip4, ctx->user_port);
+
+    index = (bpf_get_prandom_u32() % count) + 1;
+    backend_id = ((__u32)svc->service_id << 16) | index;
+    backend = bpf_map_lookup_elem(&eproxy_lb4_backends, &backend_id);
+    if (backend == NULL) {
+        return 1;
+    }
+
+    ctx->user_ip4 = backend->address;
+    ctx->user_port = backend->port;
     return 1;
+}
+
+SEC("cgroup/connect4")
+int connect4(struct bpf_sock_addr *ctx)
+{
+    return lb4_redirect(ctx);
+}
+
+SEC("cgroup/sendmsg4")
+int sendmsg4(struct bpf_sock_addr *ctx)
+{
+    return lb4_redirect(ctx);
 }
